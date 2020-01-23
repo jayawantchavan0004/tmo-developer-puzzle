@@ -5,7 +5,8 @@ import {
   Input,
   OnInit
 } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
+import { IChart } from './../chart.inteface';
 
 @Component({
   selector: 'coding-challenge-chart',
@@ -15,14 +16,9 @@ import { Observable } from 'rxjs';
 export class ChartComponent implements OnInit {
   @Input() data$: Observable<any>;
   chartData: any;
+  dataSubscription: Subscription;
+  chart: IChart;
 
-  chart: {
-    title: string;
-    type: string;
-    data: any;
-    columnNames: string[];
-    options: any;
-  };
   constructor(private cd: ChangeDetectorRef) {}
 
   ngOnInit() {
@@ -34,6 +30,11 @@ export class ChartComponent implements OnInit {
       options: { title: `Stock price`, width: '600', height: '400' }
     };
 
-    this.data$.subscribe(newData => (this.chartData = newData));
+    this.dataSubscription = this.data$.subscribe(
+      newData => (this.chartData = newData)
+    );
+  }
+  ngOnDestroy() {
+    this.dataSubscription.unsubscribe();
   }
 }
