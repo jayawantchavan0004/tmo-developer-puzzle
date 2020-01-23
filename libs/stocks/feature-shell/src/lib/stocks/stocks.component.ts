@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { PriceQueryFacade } from '@coding-challenge/stocks/data-access-price-query';
+import { debounceTime } from 'rxjs/operators';
+import { TIME_PERIOD } from './../stock.constant';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'coding-challenge-stocks',
@@ -11,18 +14,18 @@ export class StocksComponent implements OnInit {
   stockPickerForm: FormGroup;
   symbol: string;
   period: string;
-
+  subscription: Subscription;
   quotes$ = this.priceQuery.priceQueries$;
 
   timePeriods = [
-    { viewValue: 'All available data', value: 'max' },
-    { viewValue: 'Five years', value: '5y' },
-    { viewValue: 'Two years', value: '2y' },
-    { viewValue: 'One year', value: '1y' },
-    { viewValue: 'Year-to-date', value: 'ytd' },
-    { viewValue: 'Six months', value: '6m' },
-    { viewValue: 'Three months', value: '3m' },
-    { viewValue: 'One month', value: '1m' }
+    { viewValue: TIME_PERIOD.ALL_AVAILABLE_DATA, value: TIME_PERIOD.MAX },
+    { viewValue: TIME_PERIOD.FIVE_YEARS, value: TIME_PERIOD.FIVE_Y },
+    { viewValue: TIME_PERIOD.TWO_YEARS, value: TIME_PERIOD.TWO_Y },
+    { viewValue: TIME_PERIOD.ONE_YEARS, value: TIME_PERIOD.ONE_Y },
+    { viewValue: TIME_PERIOD.YEAR_TO_DATE, value: TIME_PERIOD.Y_T_D },
+    { viewValue: TIME_PERIOD.SIX_MONTH, value: TIME_PERIOD.SIX_M },
+    { viewValue: TIME_PERIOD.THREE_MONTH, value: TIME_PERIOD.THREE_M },
+    { viewValue: TIME_PERIOD.ONE_MONTH, value: TIME_PERIOD.ONE_M }
   ];
 
   constructor(private fb: FormBuilder, private priceQuery: PriceQueryFacade) {
@@ -33,13 +36,19 @@ export class StocksComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.stockPickerForm.valueChanges.subscribe(this.fetchQuote);
+    this.subscription = this.stockPickerForm.valueChanges
+      .pipe(debounceTime(TIME_PERIOD.DEBOUNCE_TIME))
+      .subscribe(val => {
+        this.stockPickerForm.valid && this.fetchQuote();
+      });
   }
 
   fetchQuote() {
-    if (this.stockPickerForm.valid) {
-      const { symbol, period } = this.stockPickerForm.value;
-      this.priceQuery.fetchQuote(symbol, period);
-    }
+    const { symbol, period } = this.stockPickerForm.value;
+    this.priceQuery.fetchQuote(symbol, period);
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 }
